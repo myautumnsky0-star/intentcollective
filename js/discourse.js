@@ -290,114 +290,120 @@ async function loadEntries() {
 
 /* ---------------- compose form (part B) ---------------- */
 
-const composeToggle = document.getElementById("compose-toggle");
-const composer = document.getElementById("composer");
-const rteBody = document.getElementById("rte-body");
-const composerStatus = document.getElementById("composer-status");
-const publishBtn = document.getElementById("publish-btn");
+try {
+  const composeToggle = document.getElementById("compose-toggle");
+  const composer = document.getElementById("composer");
+  const rteBody = document.getElementById("rte-body");
+  const composerStatus = document.getElementById("composer-status");
+  const publishBtn = document.getElementById("publish-btn");
 
-if (!POST_ENDPOINT_URL || POST_ENDPOINT_URL.includes("PASTE_YOUR")) {
-  composeToggle.hidden = true;
-} else {
-  composeToggle.addEventListener("click", () => {
-    composer.classList.toggle("hidden");
-    composeToggle.textContent = composer.classList.contains("hidden") ? "+ Share a post" : "− Close";
+  if (!POST_ENDPOINT_URL || POST_ENDPOINT_URL.includes("PASTE_YOUR")) {
+    composeToggle.hidden = true;
+  } else {
+    composeToggle.addEventListener("click", () => {
+      composer.classList.toggle("hidden");
+      composeToggle.textContent = composer.classList.contains("hidden") ? "+ Share a post" : "− Close";
+    });
+  }
+
+  // Rich text toolbar — basic Google-Docs-style formatting via execCommand.
+  document.querySelectorAll(".rte-toolbar [data-cmd]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      rteBody.focus();
+      const cmd = btn.getAttribute("data-cmd");
+      if (cmd === "createLink") {
+        const url = prompt("Link URL (including https://)");
+        if (url) document.execCommand("createLink", false, url);
+      } else {
+        document.execCommand(cmd, false, null);
+      }
+    });
   });
-}
 
-// Rich text toolbar — basic Google-Docs-style formatting via execCommand.
-document.querySelectorAll(".rte-toolbar [data-cmd]").forEach(btn => {
-  btn.addEventListener("click", () => {
-    rteBody.focus();
-    const cmd = btn.getAttribute("data-cmd");
-    if (cmd === "createLink") {
-      const url = prompt("Link URL (including https://)");
-      if (url) document.execCommand("createLink", false, url);
-    } else {
-      document.execCommand(cmd, false, null);
-    }
+  const blockSelect = document.getElementById("rte-block");
+  if (blockSelect) {
+    blockSelect.addEventListener("change", () => {
+      rteBody.focus();
+      document.execCommand("formatBlock", false, blockSelect.value);
+      blockSelect.selectedIndex = 0;
+    });
+  }
+
+  rteBody.addEventListener("focus", () => {
+    document.execCommand("defaultParagraphSeparator", false, "p");
   });
-});
 
-const blockSelect = document.getElementById("rte-block");
-if (blockSelect) {
-  blockSelect.addEventListener("change", () => {
-    rteBody.focus();
-    document.execCommand("formatBlock", false, blockSelect.value);
-    blockSelect.selectedIndex = 0;
-  });
-}
+  function setComposerStatus(message, kind) {
+    composerStatus.textContent = message || "";
+    composerStatus.classList.toggle("is-error", kind === "error");
+    composerStatus.classList.toggle("is-ok", kind === "ok");
+  }
 
-rteBody.addEventListener("focus", () => {
-  document.execCommand("defaultParagraphSeparator", false, "p");
-});
+  if (publishBtn) {
+    publishBtn.addEventListener("click", async () => {
+      const nameInput = document.getElementById("compose-name");
+      const titleInput = document.getElementById("compose-title");
+      const passwordInput = document.getElementById("compose-password");
 
-function setComposerStatus(message, kind) {
-  composerStatus.textContent = message || "";
-  composerStatus.classList.toggle("is-error", kind === "error");
-  composerStatus.classList.toggle("is-ok", kind === "ok");
-}
+      const name = nameInput.value.trim();
+      const title = titleInput.value.trim();
+      const content = rteBody.innerHTML.trim();
+      const password = passwordInput.value;
 
-if (publishBtn) {
-  publishBtn.addEventListener("click", async () => {
-    const nameInput = document.getElementById("compose-name");
-    const titleInput = document.getElementById("compose-title");
-    const passwordInput = document.getElementById("compose-password");
-
-    const name = nameInput.value.trim();
-    const title = titleInput.value.trim();
-    const content = rteBody.innerHTML.trim();
-    const password = passwordInput.value;
-
-    if (!name || !title || stripTags(content).trim().length === 0) {
-      setComposerStatus("Name, title, and content are all required.", "error");
-      return;
-    }
-    if (password !== POST_PASSWORD) {
-      setComposerStatus("Incorrect password.", "error");
-      return;
-    }
-
-    publishBtn.disabled = true;
-    setComposerStatus("Publishing…", null);
-
-    try {
-      const res = await fetch(POST_ENDPOINT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids CORS preflight
-        body: JSON.stringify({ name, title, content, password }),
-      });
-      const data = await res.json();
-
-      if (data.status !== "ok") {
-        setComposerStatus(data.message || "Something went wrong. Try again.", "error");
-        publishBtn.disabled = false;
+      if (!name || !title || stripTags(content).trim().length === 0) {
+        setComposerStatus("Name, title, and content are all required.", "error");
+        return;
+      }
+      if (password !== POST_PASSWORD) {
+        setComposerStatus("Incorrect password.", "error");
         return;
       }
 
-      // Optimistic UI: show it immediately, ahead of the sheet's CSV cache
-      // refresh (which can lag a few minutes behind the actual edit).
-      const newEntry = {
-        name, title, content,
-        date: new Date().toISOString(),
-        link: "", tag: "",
-        slug: slugify(title) + "-" + Date.now(),
-      };
-      renderEntries([newEntry, ...currentEntries]);
+      publishBtn.disabled = true;
+      setComposerStatus("Publishing…", null);
 
-      nameInput.value = "";
-      titleInput.value = "";
-      passwordInput.value = "";
-      rteBody.innerHTML = "";
-      composer.classList.add("hidden");
-      composeToggle.textContent = "+ Share a post";
-      setComposerStatus("Published. (It may take a few minutes to also show up after the sheet's own refresh.)", "ok");
-    } catch (err) {
-      setComposerStatus("Couldn't reach the posting service. Check POST_ENDPOINT_URL in js/discourse.js.", "error");
-      console.error(err);
-    }
-    publishBtn.disabled = false;
-  });
+      try {
+        const res = await fetch(POST_ENDPOINT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids CORS preflight
+          body: JSON.stringify({ name, title, content, password }),
+        });
+        const data = await res.json();
+
+        if (data.status !== "ok") {
+          setComposerStatus(data.message || "Something went wrong. Try again.", "error");
+          publishBtn.disabled = false;
+          return;
+        }
+
+        // Optimistic UI: show it immediately, ahead of the sheet's CSV cache
+        // refresh (which can lag a few minutes behind the actual edit).
+        const newEntry = {
+          name, title, content,
+          date: new Date().toISOString(),
+          link: "", tag: "",
+          slug: slugify(title) + "-" + Date.now(),
+        };
+        renderEntries([newEntry, ...currentEntries]);
+
+        nameInput.value = "";
+        titleInput.value = "";
+        passwordInput.value = "";
+        rteBody.innerHTML = "";
+        composer.classList.add("hidden");
+        composeToggle.textContent = "+ Share a post";
+        setComposerStatus("Published. (It may take a few minutes to also show up after the sheet's own refresh.)", "ok");
+      } catch (err) {
+        setComposerStatus("Couldn't reach the posting service. Check POST_ENDPOINT_URL in js/discourse.js.", "error");
+        console.error(err);
+      }
+      publishBtn.disabled = false;
+    });
+  }
+} catch (err) {
+  // A missing element or unexpected DOM state here should never blank the
+  // whole page — the read-only feed above still works either way.
+  console.error("Discourse composer failed to initialize:", err);
 }
 
 loadEntries();

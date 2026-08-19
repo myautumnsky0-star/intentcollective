@@ -243,93 +243,97 @@ async function loadEntries() {
 
 /* ---------------- compose form (part B) ---------------- */
 
-const composeToggle = document.getElementById("compose-toggle");
-const composer = document.getElementById("composer");
-const composerStatus = document.getElementById("composer-status");
-const publishBtn = document.getElementById("publish-btn");
+try {
+  const composeToggle = document.getElementById("compose-toggle");
+  const composer = document.getElementById("composer");
+  const composerStatus = document.getElementById("composer-status");
+  const publishBtn = document.getElementById("publish-btn");
 
-if (!POST_ENDPOINT_URL || POST_ENDPOINT_URL.includes("PASTE_YOUR")) {
-  composeToggle.hidden = true;
-} else {
-  composeToggle.addEventListener("click", () => {
-    composer.classList.toggle("hidden");
-    composeToggle.textContent = composer.classList.contains("hidden") ? "+ Share a link" : "− Close";
-  });
-}
+  if (!POST_ENDPOINT_URL || POST_ENDPOINT_URL.includes("PASTE_YOUR")) {
+    composeToggle.hidden = true;
+  } else {
+    composeToggle.addEventListener("click", () => {
+      composer.classList.toggle("hidden");
+      composeToggle.textContent = composer.classList.contains("hidden") ? "+ Share a link" : "− Close";
+    });
+  }
 
-function setComposerStatus(message, kind) {
-  composerStatus.textContent = message || "";
-  composerStatus.classList.toggle("is-error", kind === "error");
-  composerStatus.classList.toggle("is-ok", kind === "ok");
-}
+  function setComposerStatus(message, kind) {
+    composerStatus.textContent = message || "";
+    composerStatus.classList.toggle("is-error", kind === "error");
+    composerStatus.classList.toggle("is-ok", kind === "ok");
+  }
 
-if (publishBtn) {
-  publishBtn.addEventListener("click", async () => {
-    const nameInput = document.getElementById("compose-name");
-    const titleInput = document.getElementById("compose-title");
-    const linkInput = document.getElementById("compose-link");
-    const previewInput = document.getElementById("compose-preview");
-    const passwordInput = document.getElementById("compose-password");
+  if (publishBtn) {
+    publishBtn.addEventListener("click", async () => {
+      const nameInput = document.getElementById("compose-name");
+      const titleInput = document.getElementById("compose-title");
+      const linkInput = document.getElementById("compose-link");
+      const previewInput = document.getElementById("compose-preview");
+      const passwordInput = document.getElementById("compose-password");
 
-    const name = nameInput.value.trim();
-    const title = titleInput.value.trim();
-    const link = linkInput.value.trim();
-    const preview = previewInput.value.trim();
-    const password = passwordInput.value;
+      const name = nameInput.value.trim();
+      const title = titleInput.value.trim();
+      const link = linkInput.value.trim();
+      const preview = previewInput.value.trim();
+      const password = passwordInput.value;
 
-    if (!name || !title || !link || !preview) {
-      setComposerStatus("Name, title, link, and preview are all required.", "error");
-      return;
-    }
-    if (!/^https?:\/\//i.test(link)) {
-      setComposerStatus("Link must start with http:// or https://", "error");
-      return;
-    }
-    if (password !== POST_PASSWORD) {
-      setComposerStatus("Incorrect password.", "error");
-      return;
-    }
-
-    publishBtn.disabled = true;
-    setComposerStatus("Publishing…", null);
-
-    try {
-      const res = await fetch(POST_ENDPOINT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids CORS preflight
-        body: JSON.stringify({ name, title, link, preview, password }),
-      });
-      const data = await res.json();
-
-      if (data.status !== "ok") {
-        setComposerStatus(data.message || "Something went wrong. Try again.", "error");
-        publishBtn.disabled = false;
+      if (!name || !title || !link || !preview) {
+        setComposerStatus("Name, title, link, and preview are all required.", "error");
+        return;
+      }
+      if (!/^https?:\/\//i.test(link)) {
+        setComposerStatus("Link must start with http:// or https://", "error");
+        return;
+      }
+      if (password !== POST_PASSWORD) {
+        setComposerStatus("Incorrect password.", "error");
         return;
       }
 
-      // Optimistic UI: show it immediately, ahead of the sheet's CSV cache
-      // refresh (which can lag a few minutes behind the actual edit).
-      const newEntry = {
-        name, title, link, preview,
-        date: new Date().toISOString(),
-        slug: slugify(title) + "-" + Date.now(),
-      };
-      renderEntries([newEntry, ...currentEntries]);
+      publishBtn.disabled = true;
+      setComposerStatus("Publishing…", null);
 
-      nameInput.value = "";
-      titleInput.value = "";
-      linkInput.value = "";
-      previewInput.value = "";
-      passwordInput.value = "";
-      composer.classList.add("hidden");
-      composeToggle.textContent = "+ Share a link";
-      setComposerStatus("Published. (It may take a few minutes to also show up after the sheet's own refresh.)", "ok");
-    } catch (err) {
-      setComposerStatus("Couldn't reach the posting service. Check POST_ENDPOINT_URL in js/news.js.", "error");
-      console.error(err);
-    }
-    publishBtn.disabled = false;
-  });
+      try {
+        const res = await fetch(POST_ENDPOINT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" }, // avoids CORS preflight
+          body: JSON.stringify({ name, title, link, preview, password }),
+        });
+        const data = await res.json();
+
+        if (data.status !== "ok") {
+          setComposerStatus(data.message || "Something went wrong. Try again.", "error");
+          publishBtn.disabled = false;
+          return;
+        }
+
+        // Optimistic UI: show it immediately, ahead of the sheet's CSV cache
+        // refresh (which can lag a few minutes behind the actual edit).
+        const newEntry = {
+          name, title, link, preview,
+          date: new Date().toISOString(),
+          slug: slugify(title) + "-" + Date.now(),
+        };
+        renderEntries([newEntry, ...currentEntries]);
+
+        nameInput.value = "";
+        titleInput.value = "";
+        linkInput.value = "";
+        previewInput.value = "";
+        passwordInput.value = "";
+        composer.classList.add("hidden");
+        composeToggle.textContent = "+ Share a link";
+        setComposerStatus("Published. (It may take a few minutes to also show up after the sheet's own refresh.)", "ok");
+      } catch (err) {
+        setComposerStatus("Couldn't reach the posting service. Check POST_ENDPOINT_URL in js/news.js.", "error");
+        console.error(err);
+      }
+      publishBtn.disabled = false;
+    });
+  }
+} catch (err) {
+  console.error("News composer failed to initialize:", err);
 }
 
 loadEntries();
