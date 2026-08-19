@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>News — Intent Collective</title>
+<meta name="description" content="Links and ideas shared by intent collective fellows.">
+<link rel="icon" href="assets/logo.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a href="index.html" class="wordmark-link">
+      <img src="assets/wordmark.png" alt="Intent Collective">
+    </a>
+    <nav class="site-nav">
+      <a href="index.html">Index</a>
+      <a href="structure.html">Structure</a>
+      <a href="discourse.html">Discourse</a>
+      <a href="news.html" aria-current="page">News</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-head">
+    <div class="wrap">
+      <div class="mark-label">News</div>
+      <h1>Links and ideas from the fellows.</h1>
+      <p class="lede">
+        Pulled live from a shared Google Sheet. Click any card to read the preview in full, then follow the link out.
+      </p>
+    </div>
+  </section>
+
+  <div class="wrap">
+
+    <div id="composer-region">
+      <button type="button" id="compose-toggle" class="compose-toggle">+ Share a link</button>
+
+      <div id="composer" class="composer hidden">
+        <div class="field">
+          <label for="compose-name">Name</label>
+          <input type="text" id="compose-name" placeholder="Your name">
+        </div>
+
+        <div class="field">
+          <label for="compose-title">Title</label>
+          <input type="text" id="compose-title" placeholder="Headline of what you're sharing">
+        </div>
+
+        <div class="field">
+          <label for="compose-link">Link</label>
+          <input type="text" id="compose-link" placeholder="https://…">
+        </div>
+
+        <div class="field">
+          <label for="compose-preview">Preview</label>
+          <textarea id="compose-preview" rows="4" placeholder="A couple of sentences describing it"></textarea>
+        </div>
+
+        <div class="composer-actions">
+          <input type="password" id="compose-password" placeholder="Password to publish">
+          <button type="button" id="publish-btn" class="btn-primary">Publish</button>
+          <span id="composer-status" class="composer-status" aria-live="polite"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="discourse-toolbar" id="discourse-toolbar">
+      <span class="count" id="entry-count" aria-live="polite"></span>
+    </div>
+
+    <div id="state" class="state-msg">Loading links…</div>
+    <div id="entry-grid" class="entry-grid" hidden></div>
+
+    <article id="post-detail" class="post-detail" hidden></article>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>&copy; <span id="year"></span> intent collective&trade;</span>
+    <span>Est. Chicago</span>
+  </div>
+</footer>
+
+<script src="js/news.js"></script>
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+
+</body>
+</html>
